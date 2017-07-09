@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { RiverLevel } from './river-level';
 
 import * as d3 from 'd3';
 
@@ -11,12 +12,15 @@ export class AppComponent {
   title = 'app';
   csvFiles: FileList;
 
-  parseRiverLevelsFile(files: File[]): void {
+  riverLevels: d3.DSVParsedArray<RiverLevel>;
+
+  private parseRiverLevelsFile(files: File[]): void {
     // console.log(csvFile);
     const reader: FileReader = new FileReader();
 
     reader.onload = () => {
       this.processFile(reader.result);
+      this.createGraph();
     }
 
     if (files.length !== 0) {
@@ -24,8 +28,25 @@ export class AppComponent {
     }
   }
 
-  processFile(data: any): void {
-    const riverLevels = d3.csvParse(data);
-    console.log(riverLevels.columns);
+  private processFile(data): void {
+    this.riverLevels = d3.csvParse<RiverLevel>(data, (d) => {
+      return {
+        date: new Date(d['Date']),
+        level: +d['Numeric River Level'],
+        note: d['Notes']
+      }
+    });
+  }
+
+  createGraph(): void {
+    const yScale = d3.scaleLinear();
+    const xScale = d3.scaleTime();
+
+    d3.select('.river-levels-graph')
+      .selectAll('rect')
+      .data(this.riverLevels)
+      .enter()
+      .attr('width', (d) => xScale(d.date))
+      .attr('height', (d) => yScale(d.level))
   }
 }
